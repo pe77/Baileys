@@ -12,14 +12,22 @@ export * from './Call'
 
 import type NodeCache from 'node-cache'
 import { proto } from '../../WAProto'
-import { AuthenticationState } from './Auth'
+import { AuthenticationState, TransactionCapabilityOptions } from './Auth'
 import { CommonSocketConfig } from './Socket'
 
 export type MessageRetryMap = { [msgId: string]: number }
 
-export type SocketConfig = CommonSocketConfig<AuthenticationState> & {
+export type SocketConfig = CommonSocketConfig & {
+    /** provide an auth state object to maintain the auth state */
+    auth: AuthenticationState
+    /** By default true, should history messages be downloaded and processed */
+    downloadHistory: boolean
+    /** transaction capability options for SignalKeyStore */
+    transactionOpts: TransactionCapabilityOptions
     /** provide a cache to store a user's device list */
     userDevicesCache?: NodeCache
+    /** marks the client as online whenever the socket successfully connects */
+    markOnlineOnConnect: boolean
     /**
      * map to store the retry counts for failed messages;
      * used to determine whether to retry a message or not */
@@ -32,6 +40,8 @@ export type SocketConfig = CommonSocketConfig<AuthenticationState> & {
      * */
     getMessage: (key: proto.IMessageKey) => Promise<proto.IMessage | undefined>
 }
+
+export type UserFacingSocketConfig = Partial<SocketConfig> & { auth: AuthenticationState }
 
 export enum DisconnectReason {
 	connectionClosed = 428,
@@ -59,18 +69,16 @@ export type WABusinessHoursConfig = {
 
 export type WABusinessProfile = {
     description: string
-    email: string
+    email: string | undefined
     business_hours: {
         timezone?: string
         config?: WABusinessHoursConfig[]
         business_config?: WABusinessHoursConfig[]
     }
     website: string[]
-    categories: {
-        id: string
-        localized_display_name: string
-    }[]
+    category?: string
     wid?: string
+    address?: string
 }
 
 

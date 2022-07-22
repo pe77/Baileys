@@ -1,5 +1,6 @@
 import type { proto } from '../../WAProto'
 import type { Contact } from './Contact'
+import type { MinimalMessage } from './Message'
 
 export type KeyPair = { public: Uint8Array, private: Uint8Array }
 export type SignedKeyPair = { keyPair: KeyPair, signature: Uint8Array, keyId: number }
@@ -45,6 +46,8 @@ export type AuthenticationCreds = SignalCreds & {
 
     lastAccountSyncTimestamp?: number
     platform?: string
+
+    processedHistoryMessages: MinimalMessage[]
     accountSettings: AccountSettings
 }
 
@@ -70,6 +73,11 @@ export type SignalKeyStoreWithTransaction = SignalKeyStore & {
     isInTransaction: () => boolean
     transaction(exec: () => Promise<void>): Promise<void>
     prefetch<T extends keyof SignalDataTypeMap>(type: T, ids: string[]): Promise<void>
+}
+
+export type TransactionCapabilityOptions = {
+	maxCommitRetries: number
+	delayBetweenTriesMs: number
 }
 
 export type SignalAuthState = {

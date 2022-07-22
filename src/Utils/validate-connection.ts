@@ -45,7 +45,7 @@ const getClientPayload = (config: ClientPayloadConfig): proto.IClientPayload => 
 }
 
 export const generateLoginNode = (userJid: string, config: ClientPayloadConfig): proto.IClientPayload => {
-	const { user, device } = jidDecode(userJid)
+	const { user, device } = jidDecode(userJid)!
 	const payload: proto.IClientPayload = {
 		...getClientPayload(config),
 		passive: true,
@@ -66,25 +66,26 @@ export const generateRegistrationNode = (
 		.digest()
 	const browserVersion = config.browser[2].split('.')
 
-	const companion: proto.ICompanionProps = {
+	const companion: proto.IDeviceProps = {
 		os: config.browser[0],
 		version: {
 			primary: +(browserVersion[0] || 0),
 			secondary: +(browserVersion[1] || 1),
 			tertiary: +(browserVersion[2] || 0),
 		},
-		platformType: proto.CompanionProps.CompanionPropsPlatformType[config.browser[1].toUpperCase()] || proto.CompanionProps.CompanionPropsPlatformType.UNKNOWN,
+		platformType: proto.DeviceProps.DevicePropsPlatformType[config.browser[1].toUpperCase()]
+			|| proto.DeviceProps.DevicePropsPlatformType.UNKNOWN,
 		requireFullSync: false,
 	}
 
-	const companionProto = proto.CompanionProps.encode(companion).finish()
+	const companionProto = proto.DeviceProps.encode(companion).finish()
 
 	const registerPayload: proto.IClientPayload = {
 		...getClientPayload(config),
 		passive: false,
-		regData: {
+		devicePairingData: {
 			buildHash: appVersionBuf,
-			companionProps: companionProto,
+			deviceProps: companionProto,
 			eRegid: encodeBigEndian(registrationId),
 			eKeytype: KEY_BUNDLE_TYPE,
 			eIdent: signedIdentityKey.public,
@@ -135,11 +136,15 @@ export const configureSuccessfulPairing = (
 	// sign the details with our identity key
 	const deviceMsg = Buffer.concat([ Buffer.from([6, 1]), deviceDetails, signedIdentityKey.public, accountSignatureKey ])
 	account.deviceSignature = Curve.sign(signedIdentityKey.private, deviceMsg)
-	// do not provide the "accountSignatureKey" back
-	account.accountSignatureKey = null
 
 	const identity = createSignalIdentity(jid, accountSignatureKey)
-	const accountEnc = proto.ADVSignedDeviceIdentity.encode(account).finish()
+	const accountEnc = proto.ADVSignedDeviceIdentity
+		.encode({
+			...account,
+			// do not provide the "accountSignatureKey" back
+			accountSignatureKey: undefined
+		})
+		.finish()
 
 	const deviceIdentity = proto.ADVDeviceIdentity.decode(account.details)
 
